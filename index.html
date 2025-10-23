@@ -180,7 +180,7 @@
         <button id="exportPNGBtn" class="btn" disabled>Exportar PNG</button>
       </div> -->
     </div>
-      <img src="/Data/baner.png" alt="Banner" style="margin-top:10px;max-height:160px;border-radius:8px;border:1px solid var(--border);width:100%;height:auto;object-fit:cover" />
+      <img src="baner.png" alt="Banner" style="margin-top:10px;max-height:160px;border-radius:8px;border:1px solid var(--border);width:100%;height:auto;object-fit:cover" />
   </header>
   <aside id= "sidebar">
     <div class="section">
@@ -209,19 +209,19 @@
   // === Íconos personalizados ===
   const icons = {
     estatal: L.icon({
-      iconUrl: '/Data/icon_estatal.png',
+      iconUrl: 'icon_estatal.png',
       iconSize: [32, 42],
       iconAnchor: [16, 42],
       popupAnchor: [0, -40]
     }),
     privado: L.icon({
-      iconUrl: '/Data/icon_privado.png',
+      iconUrl: 'icon_privado.png',
       iconSize: [32, 42],
       iconAnchor: [16, 42],
       popupAnchor: [0, -40]
     }),
     municipal: L.icon({
-      iconUrl: '/Data/icon_municipal.png',
+      iconUrl: 'icon_municipal.png',
       iconSize: [32, 42],
       iconAnchor: [16, 42],
       popupAnchor: [0, -40]
@@ -238,8 +238,8 @@
   const filterSummary=document.getElementById('filterSummary');
   function getVals(sel){return Array.from(sel.selectedOptions).map(o=>o.value)}
   function updateSummary(){const t=(state.data?.features?.length)||0;const s=(state.filtered?.features?.length)||0;filterSummary.textContent=`${s} de ${t} visibles`;}
-  const gj=await fetch('/Data/IES.geojson').then(r=>r.json()).catch(()=>null);
-  const csvTxt=await fetch('/Data/listado_carreras.csv').then(r=>r.text()).catch(()=>null);
+  const gj=await fetch('IES.geojson').then(r=>r.json()).catch(()=>null);
+  const csvTxt=await fetch('listado_carreras.csv').then(r=>r.text()).catch(()=>null);
   if (csvTxt) {
   const parsed = Papa.parse(csvTxt, { header: true });
   codeMap = {};
