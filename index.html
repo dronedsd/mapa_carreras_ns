@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CARRERAS NIVEL SUPERIOR</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root{--brand:#E85C35; --brand-600:#de5129; --brand-700:#c5451f; --brand-100:#FFE6DB; --ink:#1f2937; --muted:#6b7280; --border:#e5e7eb;}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial,'Noto Sans';}
+    .app{display:grid;grid-template-columns:320px 1fr;grid-template-rows:auto 1fr;grid-template-areas:"header header""sidebar map";height:100%}
+    header{grid-area:header;padding:10px 14px;border-bottom:1px solid var(--border);background:#fff;position:sticky;top:0;z-index:1000}
+    #sidebar{grid-area:sidebar;border-right:1px solid var(--border);padding:12px;overflow:auto;background:var(--brand-100)}
+    #map{grid-area:map}
+    .section{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 1px 0 rgba(0,0,0,.02)}
+    .btn{cursor:pointer;padding:8px 10px;border:1px solid var(--brand-600);border-radius:10px;background:#fff;font-size:13px}
+    .btn:hover{background:var(--brand-100)}
+    label{display:block;font-size:12px;color:#374151;margin-bottom:6px}
+    input,select{width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;font-size:14px}
+    /* === Responsive / Mobile === */
+  @media (max-width: 900px){
+    .app{
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "header"
+        "map";
+  }
+  #map{ height: calc(100dvh - 140px); } /* ajustá si tu header es más alto */
+
+  /* Off-canvas sidebar */
+    #sidebar{
+      position: fixed;
+      inset: 0 auto 0 0;               /* left side */
+      width: min(92vw, 420px);
+      height: 100dvh;
+      z-index: 1100;
+      background: #fff;
+      border-right: 1px solid var(--border);
+      transform: translateX(-100%);
+      transition: transform .25s ease;
+    }
+    body.sidebar-open #sidebar{ transform: translateX(0); }
+
+    /* Backdrop */
+    #backdrop{ display: none; }
+    body.sidebar-open #backdrop{
+      display: block;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.35);
+      z-index: 1000;
+    }
+
+    /* Floating button */
+    #toggleSidebar{
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      z-index: 1200;
+      padding: 12px 14px;
+      border-radius: 999px;
+      box-shadow: 0 6px 16px rgba(0,0,0,.15);
+      font-weight: 600;
+    }
+
+    /* Touch targets */
+    .btn{ padding: 12px 14px; }
+    select[multiple]{ min-height: 160px; }
+  }
+
+    /* Mejoras visuales para el filtro de carreras */
+  #filterCarrera {
+    width: 100%;
+    font-size: 14px;
+    line-height: 1.4;
+    min-height: 80px;              /* más espacio */
+    white-space: normal;            /* permite salto de línea */
+    overflow-y: auto;
+    word-break: break-word;
+  }
+
+  #filterCarrera option {
+    padding: 6px 8px;
+    line-height: 1.3;
+    border-bottom: 1px solid #eee;
+    white-space: normal;
+    text-align: left;
+  }
+
+  /* Hover y selección más claros */
+  #filterCarrera option:hover {
+    background-color: var(--brand-100);
+  }
+
+  #filterCarrera option:checked {
+    background-color: var(--brand-600);
+    color: #fff;
+  }
+
+  /* Mejoras visuales para el filtro de Gestión */
+  #filterGestion {
+    width: 100%;
+    font-size: 14px;
+    line-height: 1.4;
+    min-height: 60px;              /* más espacio */
+    white-space: normal;            /* permite salto de línea */
+    overflow-y: auto;
+    word-break: break-word;
+  }
+
+  #filterGestion option {
+    padding: 6px 8px;
+    line-height: 1.3;
+    border-bottom: 1px solid #eee;
+    white-space: normal;
+    text-align: left;
+  }
+
+  /* Hover y selección más claros */
+  #filterGestion option:hover {
+    background-color: var(--brand-100);
+  }
+
+  #filterGestion option:checked {
+    background-color: var(--brand-600);
+    color: #fff;
+  }
+
+ /* Mejoras visuales para el filtro de filterLocalidad */
+  #filterLocalidad {
+    width: 100%;
+    font-size: 14px;
+    line-height: 1.4;
+    min-height: 80px;              /* más espacio */
+    white-space: normal;            /* permite salto de línea */
+    overflow-y: auto;
+    word-break: break-word;
+  }
+
+  #filterLocalidad option {
+    padding: 6px 8px;
+    line-height: 1.3;
+    border-bottom: 1px solid #eee;
+    white-space: normal;
+    text-align: left;
+  }
+
+  /* Hover y selección más claros */
+  #filterLocalidad option:hover {
+    background-color: var(--brand-100);
+  }
+
+  #filterLocalidad option:checked {
+    background-color: var(--brand-600);
+    color: #fff;
+  }
+
+#filterLocalidad option:hover, #filterDepto option:hover { background: var(--brand-100); }
+#filterLocalidad option:checked, #filterDepto option:checked { background: var(--brand-600); color:#fff; }
+
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <button id="toggleSidebar" class="btn" aria-controls="sidebar" aria-expanded="false" style="display:none">Filtros</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <h1 style="margin:0;font-size:1.5rem;font-weight:700;color:var(--brand-700)">
+        <strong>CARRERAS NIVEL SUPERIOR</strong>
+      </h1>
+      <p style="margin:2px 0 0;font-size:0.95rem;color:#555;font-weight:400;">
+        Dirección de Educación Superior – Ministerio de Educación de Jujuy
+      </p>
+
+       <!-- <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+       <button id="fitBtn" class="btn" disabled>Ajustar vista</button>
+        <button id="clearStyleBtn" class="btn" disabled>Quitar estilo</button>
+        <button id="exportPNGBtn" class="btn" disabled>Exportar PNG</button>
+      </div> -->
+    </div>
+      <img src="/Data/baner.png" alt="Banner" style="margin-top:10px;max-height:160px;border-radius:8px;border:1px solid var(--border);width:100%;height:auto;object-fit:cover" />
+  </header>
+  <aside id= "sidebar">
+    <div class="section">
+      <label><strong>FILTROS</strong></label>
+      <div class="row"><label><strong></strong>Nombre Institución</strong></label><input id="filterNombreTxt" type="text" placeholder="Ej: IES 5, TELLO..."/></div>
+      <div class="row"><label><strong></strong>Tipo de gestión</strong></label><select id="filterGestion" multiple size="3"></select></div>
+
+
+       <div class="row"><label><strong></strong>Localidad</strong></label><select id="filterLocalidad" multiple size="3"></select></div>
+
+      
+      <div class="row"><label><strong></strong>Carrera</strong></label><select id="filterCarrera" multiple size="4"></select></div>
+      <div class="row" style="display:flex;gap:6px"><button id="applyFiltersBtn" class="btn">Aplicar</button><button id="clearFiltersBtn" class="btn">Limpiar</button></div>
+      <div id="filterSummary" style="font-size:12px;color:#555"></div>
+    </div>
+  </aside>
+  <div id="map"></div>
+  <div id="backdrop" aria-hidden="true"></div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://unpkg.com/chroma-js@2.4.2/chroma.min.js"></script>
+<script>
+(async function(){
+  const map=L.map('map').setView([-24.1858,-65.2995],7);
+  // === Íconos personalizados ===
+  const icons = {
+    estatal: L.icon({
+      iconUrl: '/Data/icon_estatal.png',
+      iconSize: [32, 42],
+      iconAnchor: [16, 42],
+      popupAnchor: [0, -40]
+    }),
+    privado: L.icon({
+      iconUrl: '/Data/icon_privado.png',
+      iconSize: [32, 42],
+      iconAnchor: [16, 42],
+      popupAnchor: [0, -40]
+    }),
+    municipal: L.icon({
+      iconUrl: '/Data/icon_municipal.png',
+      iconSize: [32, 42],
+      iconAnchor: [16, 42],
+      popupAnchor: [0, -40]
+    })
+  };
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+  const state={data:null,filtered:null,fields:{label:'nombre',carreraTxt:'carreras_texto',gestion:'ges',localidad:'localidad',departamento:'departamento'}};
+  let codeMap = null; // { "CODIGO" -> "NOMBRE DE CARRERA" }
+  const filterNombreTxt=document.getElementById('filterNombreTxt');
+  const filterGestion=document.getElementById('filterGestion');
+  const filterLocalidad=document.getElementById('filterLocalidad');
+  const filterCarrera=document.getElementById('filterCarrera');
+  const filterSummary=document.getElementById('filterSummary');
+  function getVals(sel){return Array.from(sel.selectedOptions).map(o=>o.value)}
+  function updateSummary(){const t=(state.data?.features?.length)||0;const s=(state.filtered?.features?.length)||0;filterSummary.textContent=`${s} de ${t} visibles`;}
+  const gj=await fetch('/Data/IES.geojson').then(r=>r.json()).catch(()=>null);
+  const csvTxt=await fetch('/Data/listado_carreras.csv').then(r=>r.text()).catch(()=>null);
+  if (csvTxt) {
+  const parsed = Papa.parse(csvTxt, { header: true });
+  codeMap = {};
+  (parsed.data || []).forEach(row => {
+    const code = (row.CODIGO || row.codigo || row.Código || row.code || row.Cod || '').toString().trim();
+    const name = (row.CARRERA || row.carrera || row.nombre || row.Nombre || '').toString().trim();
+    if (code) codeMap[code] = name || code;
+  });
+  }
+  if(!gj){alert('No se pudo cargar IES.geojson');return;}
+  state.data=gj;state.filtered=gj;
+  const feats=gj.features||[];
+  const gests=[...new Set(feats.map(f=>f.properties?.ges).filter(Boolean))].sort();
+  filterGestion.innerHTML=gests.map(v=>`<option>${v}</option>`).join('');
+  const locPairs=feats.map(f=>{const p=f.properties||{};return{d:p.departamento||'',l:p.localidad||''}}).filter(o=>o.l);
+  const locSet=[...new Set(locPairs.map(o=>`${o.d}|||${o.l}`))].map(s=>{const [d,l]=s.split('|||');return{d,l}});
+  locSet.sort((a,b)=>a.d.localeCompare(b.d)||a.l.localeCompare(b.l));
+  filterLocalidad.innerHTML=locSet.map(o=>`<option value="${o.l}">${o.d?o.d+' → ':''}${o.l}</option>`).join('');
+  
+  // Tomar códigos de carreras desde el GeoJSON (separador "|") y mostrar nombres desde el CSV
+  const presentCodes = new Set(
+  feats.flatMap(f => {
+    const p = f.properties || {};
+    const raw = (p.carreras_texto || p.carrerar_texto || '') + '';
+    //return raw.split(/\s*\|\s*/).map(s => s.trim()).filter(Boolean);
+    return raw.split(/\s*\|\s*/).map(s => s.trim()).filter(Boolean);
+  })
+  );
+  const carrOptions = [...presentCodes]
+  .map(code => ({ code, name: (codeMap && codeMap[code]) ? codeMap[code] : code }))
+  .sort((a,b) => a.name.localeCompare(b.name));
+  filterCarrera.innerHTML = carrOptions.map(o => `<option value="${o.code}">${o.name}</option>`).join('');
+
+  
+  function applyFilters(){
+    const gSel=new Set(getVals(filterGestion));
+    const lSel=new Set(getVals(filterLocalidad));
+    const cSel=new Set(getVals(filterCarrera));
+    const q=(filterNombreTxt.value||'').toLowerCase();
+    const featsF=feats.filter(f=>{
+      const p=f.properties||{};
+      const gOk=!gSel.size||gSel.has(p.ges);
+      const lOk=!lSel.size||lSel.has(p.localidad);
+
+      const rawCarr = ((p.carreras_texto || p.carrerar_texto || '') + '');
+      const codes = rawCarr.split(/\s*\|\s*/).map(s => s.trim()).filter(Boolean);
+      const cOk = !cSel.size || codes.some(code => cSel.has(code));
+
+      const nOk=!q||((p.nombre||'').toLowerCase().includes(q));
+      return gOk&&lOk&&cOk&&nOk;
+    });
+    state.filtered={type:'FeatureCollection',features:featsF};
+    if(state.layer)map.removeLayer(state.layer);
+
+
+
+    state.layer = L.geoJSON(state.filtered, {
+      pointToLayer: (feature, latlng) => {
+    const tipo = (feature.properties?.ges || '').toLowerCase();
+    const icon = icons[tipo] || icons.estatal; // usa "estatal" como fallback
+    return L.marker(latlng, { icon });
+  },
+  onEachFeature: (f, l) => {
+    const p = f.properties || {};
+    const raw = (p.carreras_texto || p.carrerar_texto || '') + '';
+    const codes = raw.split(/\s*\|\s*/).map(s => s.trim()).filter(Boolean);
+    const names = (codes.length && codeMap)
+      ? codes.map(c => codeMap[c] || c)
+      : codes;
+    const carrerasHTML = names.length
+      ? `<ul style="margin:6px 0 0 16px;padding:0">${names.map(n => `<li>${n}</li>`).join('')}</ul>`
+      : `<em>Sin datos</em>`;
+    const html = `
+      <div style="min-width:auto">
+        <h4 style="margin:0 0 4px 0">${p.nombre || ''}</h4>
+        <div><strong>CUE:</strong> ${p.cue || ''}</div>
+        <div><strong>GESTIÓN:</strong> ${p.ges || ''}</div>
+        <div><strong>DEPARTAMENTO:</strong> ${p.departamento || ''}</div>
+        <div><strong>LOCALIDAD:</strong> ${p.localidad || ''}</div>
+        <div><strong>DIRECCIÓN:</strong> ${p.domicilio || ''}</div>
+        <div><strong>TELÉFONO:</strong> ${p.telefono || ''}</div>
+        <div><strong>EMAIL:</strong> ${p.mail || ''}</div>
+        <div style="margin-top:6px"><strong>CARRERAS</strong>:</div>
+        ${carrerasHTML}
+      </div>`;
+    l.bindPopup(html);
+  }
+}).addTo(map);
+    map.fitBounds(L.geoJSON(state.filtered).getBounds());
+    updateSummary();
+  }
+  document.getElementById('applyFiltersBtn').onclick=applyFilters;
+  document.getElementById('clearFiltersBtn').onclick=()=>{[filterGestion,filterLocalidad,filterCarrera].forEach(s=>Array.from(s.options).forEach(o=>o.selected=false));filterNombreTxt.value='';state.filtered=state.data;applyFilters();}
+  applyFilters();
+// === Mobile sidebar toggling ===
+const toggleBtn = document.getElementById('toggleSidebar');
+const backdrop = document.getElementById('backdrop');
+
+function updateToggleVisibility(){
+  // Mostrar botón solo en pantallas chicas
+  const show = window.matchMedia('(max-width: 900px)').matches;
+  toggleBtn.style.display = show ? 'inline-flex' : 'none';
+  if(!show){
+    document.body.classList.remove('sidebar-open');
+    toggleBtn.setAttribute('aria-expanded','false');
+    setTimeout(()=> map.invalidateSize(), 200);
+  }
+}
+
+function openSidebar(){
+  document.body.classList.add('sidebar-open');
+  toggleBtn.setAttribute('aria-expanded','true');
+  setTimeout(()=> map.invalidateSize(), 250);
+}
+
+function closeSidebar(){
+  document.body.classList.remove('sidebar-open');
+  toggleBtn.setAttribute('aria-expanded','false');
+  setTimeout(()=> map.invalidateSize(), 250);
+}
+
+toggleBtn.addEventListener('click', ()=>{
+  const open = document.body.classList.contains('sidebar-open');
+  open ? closeSidebar() : openSidebar();
+});
+backdrop.addEventListener('click', closeSidebar);
+window.addEventListener('resize', updateToggleVisibility);
+updateToggleVisibility();
+
+// Recalcular mapa al cambiar orientación (iOS/Android)
+window.addEventListener('orientationchange', ()=> setTimeout(()=> map.invalidateSize(), 300));
+
+
+
+})();
+</script>
+</body>
+</html>
